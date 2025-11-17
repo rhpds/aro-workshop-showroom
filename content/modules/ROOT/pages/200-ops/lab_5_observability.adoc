@@ -246,6 +246,8 @@ oc create ns resource-locker-operator
 
 oc create ns patch-operator
 
+oc create ns openshift-cluster-observability-operator
+
 helm upgrade -n custom-logging clf-operators \
   mobb/operatorhub --install \
   --values ./clf-operators.yaml
