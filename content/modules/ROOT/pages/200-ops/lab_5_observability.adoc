@@ -150,7 +150,7 @@ version.BuildInfo{Version:"v3.15.4+60.el9", GitCommit:"fa384522f2878321c8b6b1a06
 +
 [source,sh,role=execute]
 ----
-helm repo add mobb https://scorpiion.github.io/helm-charts/
+helm repo add mobb https://rh-mobb.github.io/helm-charts/
 
 helm repo update
 ----
