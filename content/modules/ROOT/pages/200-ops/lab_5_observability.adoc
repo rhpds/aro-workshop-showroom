@@ -418,8 +418,10 @@ oc -n openshift-logging rollout status deploy logging-loki-query-frontend
 .Sample Output
 [source,text,options=nowrap]
 ----
-deployment "aro-thanos-af-grafana-cr-deployment" successfully rolled out
-deployment "thanos-querier" successfully rolled out
+deployment "logging-loki-distributor" successfully rolled out
+deployment "logging-loki-gateway" successfully rolled out
+deployment "logging-loki-querier" successfully rolled out
+deployment "logging-loki-query-frontend" successfully rolled out
 ----
 
 == View the Metrics and Logs in Grafana
