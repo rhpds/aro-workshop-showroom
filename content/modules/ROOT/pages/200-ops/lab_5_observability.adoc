@@ -317,7 +317,7 @@ No resources found in custom-logging namespace.
 [source,sh,role=execute]
 ----
 helm upgrade -n "custom-logging" aro-thanos-af \
-  --install mobb/aro-thanos-af --version 0.8.6 \
+  --install mobb/aro-thanos-af --version 0.8.8 \
   --set "aro.storageAccount=${AZR_STORAGE_ACCOUNT_NAME}" \
   --set "aro.storageAccountKey=${AZR_STORAGE_KEY}" \
   --set "aro.storageContainer=aro-metrics" \
@@ -444,7 +444,7 @@ https://grafana-route-custom-logging.apps.nbybk9f3.eastus.aroapp.io
 
 . Browse to the provided route address in the same browser window as your OCP console and login using your OpenShift credentials. If you tested this before you are already logged in.
 
-. To view an existing dashboard, first click on *Dashboards" in the left menu and then: *custom-logging \-> Node Exporter \-> USE Method \-> Cluster* (click on the *search* icon on the left to see the *custom-logging* dashboard).
+. To view an existing dashboard, first click on *Dashboards* in the left menu and then: *custom-logging \-> Node Exporter \-> USE Method \-> Cluster* (click on the *search* icon on the left to see the *custom-logging* dashboard).
 +
 [INFO]
 ====
@@ -458,7 +458,7 @@ image::grafana-metrics.png[]
 If you don't see the graphs as in the screenshot above wait a minute and refresh the browser window - it takes a few minutes for the Grafana dashboard to start showing data.
 ====
 
-. Click the Drilldown (drill) icon in the left hand menu, then select "Logs". You will now see an error message like this:
+. To view the logs, click the Drilldown (drill) icon in the left hand menu, then select "Logs". You will now see an error message like this:
 +
 image::loki-access-error.png[]
 +
@@ -537,15 +537,13 @@ In order to display metrics from your own applications you need to enable custom
 oc -n openshift-monitoring get configmap cluster-monitoring-config -o yaml
 ----
 +
-.Sample Output (the newlines is becuase of helm template syntax)
+.Sample Output
 [source,text,options=nowrap]
 ----
 apiVersion: v1
 data:
-  config.yaml: |2
-
+  config.yaml: |
     enableUserWorkload: true
-
     prometheusK8s:
       remoteWrite:
         - url: "http://thanos-receive.custom-logging.svc.cluster.local:9091/api/v1/receive"
@@ -578,9 +576,7 @@ thanos-ruler-user-workload-0           3/3     Running   0          23m
 thanos-ruler-user-workload-1           3/3     Running   0          23m
 ----
 
-. Append `remoteWrite` settings to the user-workload-monitoring config to forward user workload metrics to Thanos.
-+
-You can also review the User Workload Config Map that setups logging via thanos:
+. You can also review the User Workload Config Map that setups logging via thanos:
 +
 [source,sh,role=execute]
 ----
