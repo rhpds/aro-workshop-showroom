@@ -464,9 +464,9 @@ image::loki-access-error.png[]
 +
 This you can safely ignore, the reason is because we have only given permission to see logs in the `custom-logging` namespace and Grafana tries to access API endpoints it does not have permissions to use. When setting up the label selector you will also see a few warning about access, that is again because Grafana tries to read all values from the backend but it's limited in access.
 
-. The data source "`Loki (Application)`" is preselected in the dropdown for "Data source", if not, select it.
+. The data source `Loki (Application)` is preselected in the dropdown for "Data source", if not, select it.
 +
-image::loki-datasource-selector.png[]
+image::loki-datasource-selector-apps.png[]
 +
 In the labels field first enter
 +
@@ -498,9 +498,33 @@ custom-logging
 +
 Complete the label setup by pressing the enter key.
 +
-. Click the "Show logs" button to view logs from loki.
+. Click the "Show logs" button to view application logs from loki.
 +
-image::logi-grafana-logs.png[]
+image::loki-grafana-app-logs.png[]
+
+. Now select the data source `Loki (Infrastructure)` in the dropdown for "Data source":
++
+image::loki-datasource-selector-infra.png[]
++
+In the labels field first enter
++
+[source,text,options=nowrap]
+----
+log_type
+----
++
+Then click on the `Use custom value`, then click `= Equals` and enter
++
+[source,text,options=nowrap]
+----
+infrastructure
+----
++
+Complete the label setup by pressing the enter key.
++
+. Click the "Show logs" button to view infrastructure logs from loki.
++
+image::loki-grafana-infra-logs.png[]
 
 == Enabling Custom Metrics
 
