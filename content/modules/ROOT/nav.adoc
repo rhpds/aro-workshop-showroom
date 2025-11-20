@@ -7,7 +7,7 @@
 * xref:200-ops/lab_2_managing_worker_nodes.adoc[Managing Worker Nodes]
 * xref:200-ops/lab_3_autoscaling.adoc[Autoscale your ARO Cluster]
 * xref:200-ops/lab_4_labeling_nodes.adoc[Labeling your Worker Nodes]
-* xref:200-ops/lab_5_observability.adoc[Configure Red Hat OpenShift Logging with Azure Files]
+* xref:200-ops/lab_5_observability.adoc[Configure Red Hat OpenShift Logging with Azure Blob Storage]
 
 .*Deploy an Application to ARO*
 * xref:300-apps/lab_1_deploy_app.adoc[Deploy an application with Azure Database]
@@ -26,7 +26,7 @@
 ifeval::["{include_arc_content}" == "true"]
 .*Cluster Management*
 * xref:500-cluster-mgmt/arc/integration.adoc[Integrating Azure ARC with ARO]
-* xref:500-cluster-mgmt/arc/observability.adoc[Configure Red Hat OpenShift Logging with Azure Files]
+* xref:500-cluster-mgmt/arc/observability.adoc[Configure Red Hat OpenShift Logging with Azure Blob Storage]
 endif::[]
 
 .*Conclusion and What's Next*

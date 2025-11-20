@@ -141,7 +141,7 @@ To create the rules, run the following command:
 [source,sh,role=execute]
 ----
 oc -n bookinfo apply -f \
-  https://raw.githubusercontent.com/rh-mobb/rosa-workshop-content/main/rosa-content/assets/scripts/destination-rule-all.yaml
+  https://raw.githubusercontent.com/rh-mobb/aro-workshop-service-mesh-files/refs/heads/main/destination-rule-all.yaml
 ----
 +
 .Sample Output

@@ -1,8 +1,8 @@
 == Introduction
 
-Azure Red Hat OpenShift (ARO) clusters store log data inside the cluster by default. Understanding metrics and logs is critical in successfully running your cluster. Included with ARO is the OpenShift Cluster Logging Operator, which is intended to simplify log management and analysis within an ARO cluster, offering centralized log collection, powerful search capabilities, visualization tools, and integration with other other Azure systems like https://azure.microsoft.com/en-us/products/storage/files[Azure Files,window=_blank].
+Azure Red Hat OpenShift (ARO) clusters store log data inside the cluster by default. Understanding metrics and logs is critical in successfully running your cluster. Included with ARO is the OpenShift Cluster Logging Operator, which is intended to simplify log management and analysis within an ARO cluster, offering centralized log collection, powerful search capabilities, visualization tools, and integration with other other Azure systems like https://azure.microsoft.com/en-us/products/storage/blobs[Azure Blob Storage,window=_blank].
 
-In this section of the workshop, we'll configure ARO to forward logs and metrics to Azure Files and view them using Grafana.
+In this section of the workshop, we'll configure ARO to forward logs and metrics to Azure Blob Storage and view them using Grafana.
 
 == Configure Autoscaling for All Worker MachineSets
 
@@ -49,9 +49,9 @@ oc -n openshift-machine-api get machines -l "machine.openshift.io/cluster-api-ma
 oc get nodes -o wide
 ----
 
-== Configure Metrics and Log Forwarding to Azure Files
+== Configure Metrics and Log Forwarding to Azure Blob Storage
 
-. First, let's create our Azure Files storage account. To do so, run the following command::
+. First, let's create our Azure Blob Storage account. To do so, run the following command::
 +
 [source,sh,role=execute]
 ----
@@ -93,6 +93,21 @@ echo ${AZR_STORAGE_KEY}
 [source,text,options=nowrap]
 ----
 gr6ujd144KyO14BVQ5cEupJw/MWQx/XvXxQE/eG62oOvoVfnLVO68EcFGDygSXQD4pUGx+oA+wNJ+AStwccBSw==
+----
+
+. Now let's save these values in our `.workshoprc` file in case we get disconnected:
++
+[source,sh,role=execute]
+----
+cat << EOF >> ~/.workshoprc
+
+# Azure storage
+export AZR_STORAGE_ACCOUNT_NAME="storage${GUID}"
+export ARO_LOCATION=$(az aro show --resource-group openenv-${GUID} --name aro-cluster-${GUID} --query location -o tsv)
+export AZR_STORAGE_KEY=\$(az storage account keys list --resource-group "openenv-${GUID}" -n "${AZR_STORAGE_ACCOUNT_NAME}" --query "[0].value" -o tsv)
+
+EOF
+
 ----
 
 . Now, let's create a separate storage bucket for logs and metrics. To do so, run the following command:
@@ -177,18 +192,18 @@ to build a new example application in Ruby. Or use kubectl to deploy a simple Ku
 cat <<EOF > clf-operators.yaml
 subscriptions:
 - name: grafana-operator
-  channel: v4
+  channel: v5
   installPlanApproval: Automatic
   source: community-operators
   sourceNamespace: openshift-marketplace
 - name: cluster-logging
-  channel: stable
+  channel: stable-6.3
   installPlanApproval: Automatic
   source: redhat-operators
   sourceNamespace: openshift-marketplace
   namespace: openshift-logging
 - name: loki-operator
-  channel: stable
+  channel: stable-6.3
   installPlanApproval: Automatic
   source: redhat-operators
   sourceNamespace: openshift-marketplace
@@ -205,6 +220,12 @@ subscriptions:
   source: community-operators
   sourceNamespace: openshift-marketplace
   namespace: patch-operator
+- name: cluster-observability-operator
+  installPlanApproval: Automatic
+  channel: stable
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  namespace: openshift-cluster-observability-operator
 operatorGroups:
 - name: custom-logging
   targetNamespace: ~
@@ -220,6 +241,9 @@ operatorGroups:
 - name: patch-operator
   namespace: patch-operator
   targetNamespace: all
+- name: cluster-observability-operator
+  namespace: openshift-cluster-observability-operator
+  targetNamespace: all
 EOF
 ----
 
@@ -228,12 +252,16 @@ EOF
 [source,sh,role=execute]
 ----
 oc create ns openshift-logging
+oc label namespaces openshift-logging openshift.io/cluster-monitoring="true" --overwrite=true
 
 oc create ns openshift-operators-redhat
+oc label namespaces openshift-operators-redhat openshift.io/cluster-monitoring="true" --overwrite=true
 
 oc create ns resource-locker-operator
 
 oc create ns patch-operator
+
+oc create ns openshift-cluster-observability-operator
 
 helm upgrade -n custom-logging clf-operators \
   mobb/operatorhub --install \
@@ -246,9 +274,10 @@ helm upgrade -n custom-logging clf-operators \
 namespace/openshift-logging created
 namespace/openshift-operators-redhat created
 namespace/resource-locker-operator created
+namespace/patch-operator created
 Release "clf-operators" does not exist. Installing it now.
 NAME: clf-operators
-LAST DEPLOYED: Tue Dec 19 09:40:44 2023
+LAST DEPLOYED: Tue Nov  4 20:34:38 2025
 NAMESPACE: custom-logging
 STATUS: deployed
 REVISION: 1
@@ -269,7 +298,7 @@ Eventually you'll see the message `No resources found in custom-logging namespac
 [source,sh,role=execute]
 ----
 while ! oc get grafana; do sleep 5; echo -n .; done
-while ! oc get clusterlogging; do sleep 5; echo -n .; done
+while ! oc get clusterlogforwarders; do sleep 5; echo -n .; done
 while ! oc get lokistack; do sleep 5; echo -n .; done
 while ! oc get resourcelocker; do sleep 5; echo -n .; done
 ----
@@ -283,12 +312,12 @@ No resources found in custom-logging namespace.
 No resources found in custom-logging namespace.
 ----
 
-. Now that the operators have been successfully installed, let's use a helm chart to deploy Grafana and forward metrics to Azure Files. To do so, run the following command:
+. Now that the operators have been successfully installed, let's use a helm chart to deploy Grafana and forward metrics to Azure Blob Storage. To do so, run the following command:
 +
 [source,sh,role=execute]
 ----
 helm upgrade -n "custom-logging" aro-thanos-af \
-  --install mobb/aro-thanos-af --version 0.6.3 \
+  --install mobb/aro-thanos-af --version 0.8.6 \
   --set "aro.storageAccount=${AZR_STORAGE_ACCOUNT_NAME}" \
   --set "aro.storageAccountKey=${AZR_STORAGE_KEY}" \
   --set "aro.storageContainer=aro-metrics" \
@@ -316,14 +345,14 @@ If you get an error during that command wait a few seconds and try it again. Som
 +
 [source,sh,role=execute]
 ----
-oc -n custom-logging rollout status deploy grafana-deployment
+oc -n custom-logging rollout status deploy aro-thanos-af-grafana-cr-deployment
 ----
 
 . Next, let's ensure that we can access Grafana. To do so, we should fetch its route and try browsing to it with your web browser. To grab the route, run the following command:
 +
 [source,sh,role=execute]
 ----
-oc -n custom-logging get route grafana-route \
+oc -n custom-logging get route aro-thanos-af-grafana-cr-route \
   -o jsonpath='{"https://"}{.spec.host}{"\n"}'
 ----
 +
@@ -334,29 +363,6 @@ https://grafana-route-custom-logging.apps.nbybk9f3.eastus.aroapp.io
 ----
 
 . You should already be logged into the cluster because you logged into the web console earlier. Accept all permissions by clicking on *Allow selected permissions*. You should see the Grafana dashboard.
-+
-[WARNING]
-====
-If your browser displays an error that says _'Application is not available'_ wait a minute and try again.
-
-If it persists you've hit a race condition with certificate creation.
-
-Run the following command to try to resolve it:
-
-[source,sh,role=execute]
-----
-oc patch -n custom-logging service grafana-alert -p '{ "metadata": { "annotations": null }}'
-
-oc -n custom-logging delete secret aro-thanos-af-grafana-cr-tls
-
-oc patch -n custom-logging service grafana-service \
-    -p '{"metadata":{"annotations":{"retry": "true" }}}'
-
-sleep 5
-
-oc -n custom-logging rollout restart deployment grafana-deployment
-----
-====
 
 == Set up Log Forwarding
 
@@ -365,7 +371,7 @@ oc -n custom-logging rollout restart deployment grafana-deployment
 [source,sh,role=execute]
 ----
 STORAGE_CLASS=$(oc get storageclass -o=jsonpath='{.items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")].metadata.name}')
-
+echo "export STORAGE_CLASS=${STORAGE_CLASS}" >> .workshoprc
 echo ${STORAGE_CLASS}
 ----
 +
@@ -375,12 +381,12 @@ echo ${STORAGE_CLASS}
 managed-csi
 ----
 
-. Next, let's use another helm chart to deploy forward logs to Azure Files. To do so, run the following command:
+. Next, let's use another helm chart to deploy forward logs to Azure Blob Storage. To do so, run the following command:
 +
 [source,sh,role=execute]
 ----
 helm upgrade -n custom-logging aro-clf-blob \
- --install mobb/aro-clf-blob --version 0.1.3 \
+ --install mobb/aro-clf-blob --version 0.2.37 \
  --set "azure.storageAccount=${AZR_STORAGE_ACCOUNT_NAME}"  \
  --set "azure.storageAccountKey=${AZR_STORAGE_KEY}"   \
  --set "azure.storageContainer=aro-logs" \
@@ -399,58 +405,35 @@ REVISION: 1
 TEST SUITE: None
 ----
 
-. Once the Helm Chart deploys its resource, we need to wait for the Log Collector agent to be started. To watch its status, run the following command:
+. Wait until loki has been successfully deployed. Run the following command:
 +
 [source,sh,role=execute]
 ----
-oc -n openshift-logging rollout status daemonset collector
+oc -n openshift-logging rollout status deploy logging-loki-distributor
+oc -n openshift-logging rollout status deploy logging-loki-gateway
+oc -n openshift-logging rollout status deploy logging-loki-querier
+oc -n openshift-logging rollout status deploy logging-loki-query-frontend
 ----
 +
 .Sample Output
 [source,text,options=nowrap]
 ----
-daemon set "collector" successfully rolled out
+deployment "logging-loki-distributor" successfully rolled out
+deployment "logging-loki-gateway" successfully rolled out
+deployment "logging-loki-querier" successfully rolled out
+deployment "logging-loki-query-frontend" successfully rolled out
 ----
 
-. Occasionally, the log collector agent starts before the operator has finished configuring Loki. To proactively address this, we need to restart the agent. To do so, run the following command:
-+
-[source,sh,role=execute]
-----
-oc -n openshift-logging rollout restart daemonset collector
-----
-+
-.Sample Output
-[source,text,options=nowrap]
-----
-daemonset.apps/collector restarted
-----
+== View the Metrics and Logs in Grafana
 
-. Create the cluster-monitoring configmap
-+
-[source,sh,role=execute]
-----
-cat <<EOF | oc apply -f -
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cluster-monitoring-config
-  namespace: openshift-monitoring
-data:
-  config.yaml: |
-EOF
-----
-
-== View the Metrics and Logs
-
-Now that the metrics and log forwarding are forwarding to Azure Files, let's view them in Grafana.
+Now that the metrics and log forwarding are forwarding to Azure Blob Storage, let's view them in Grafana.
 
 . First, we'll need to fetch the route for Grafana and visit it in our web browser. To get the route, run the following command
 +
 [source,sh,role=execute]
 ----
-oc -n custom-logging get route grafana-route \
-   -o jsonpath='{"https://"}{.spec.host}{"\n"}'
+oc -n custom-logging get route aro-thanos-af-grafana-cr-route \
+  -o jsonpath='{"https://"}{.spec.host}{"\n"}'
 ----
 +
 .Sample Output
@@ -461,7 +444,7 @@ https://grafana-route-custom-logging.apps.nbybk9f3.eastus.aroapp.io
 
 . Browse to the provided route address in the same browser window as your OCP console and login using your OpenShift credentials. If you tested this before you are already logged in.
 
-. View an existing dashboard such as *custom-logging \-> Node Exporter \-> USE Method \-> Cluster* (click on the *search* icon on the left to see the *custom-logging* dashboard).
+. To view an existing dashboard, first click on *Dashboards" in the left menu and then: *custom-logging \-> Node Exporter \-> USE Method \-> Cluster* (click on the *search* icon on the left to see the *custom-logging* dashboard).
 +
 [INFO]
 ====
@@ -475,44 +458,109 @@ image::grafana-metrics.png[]
 If you don't see the graphs as in the screenshot above wait a minute and refresh the browser window - it takes a few minutes for the Grafana dashboard to start showing data.
 ====
 
-. Click the Explore (compass) Icon in the left hand menu, select "`Loki (Application)`" in the dropdown and search for `{kubernetes_namespace_name="custom-logging"}`. Click the blue *Run Query* button on the top right to execute the search.
+. Click the Drilldown (drill) icon in the left hand menu, then select "Logs". You will now see an error message like this:
 +
-image::grafana-logs.png[]
+image::loki-access-error.png[]
++
+This you can safely ignore, the reason is because we have only given permission to see logs in the `custom-logging` namespace and Grafana tries to access API endpoints it does not have permissions to use. When setting up the label selector you will also see a few warning about access, that is again because Grafana tries to read all values from the backend but it's limited in access.
+
+. The data source `Loki (Application)` is preselected in the dropdown for "Data source", if not, select it.
++
+image::loki-datasource-selector-apps.png[]
++
+In the labels field first enter
++
+[source,text,options=nowrap]
+----
+log_type
+----
++
+Then click on the `Use custom value`, then click `= Equals` and enter
++
+[source,text,options=nowrap]
+----
+application
+----
++
+Then press the enter key (Grafana tries to ). For the second label, enter:
++
+[source,text,options=nowrap]
+----
+kubernetes_namespace_name
+----
++
+Then click on the `Use custom value`, then click `= Equals` and enter
++
+[source,text,options=nowrap]
+----
+custom-logging
+----
++
+Complete the label setup by pressing the enter key.
++
+. Click the "Show logs" button to view application logs from loki.
++
+image::loki-grafana-app-logs.png[]
+
+. Now select the data source `Loki (Infrastructure)` in the dropdown for "Data source":
++
+image::loki-datasource-selector-infra.png[]
++
+In the labels field first enter
++
+[source,text,options=nowrap]
+----
+log_type
+----
++
+Then click on the `Use custom value`, then click `= Equals` and enter
++
+[source,text,options=nowrap]
+----
+infrastructure
+----
++
+Complete the label setup by pressing the enter key.
++
+. Click the "Show logs" button to view infrastructure logs from loki.
++
+image::loki-grafana-infra-logs.png[]
 
 == Enabling Custom Metrics
 
-In order to display metrics from your own applications you need to enable custom metrics.
+In order to display metrics from your own applications you need to enable custom metrics. We already did this as part of the `aro-thanos-af` helm chart earlier.
 
-. Check the cluster-monitoring-config ConfigMap object:
+. Let's confirm these settings by checking the cluster-monitoring-config ConfigMap object. You can see here how we have enabled the `enableUserWorkload: true` flag and setup `remoteWrite` to `thanos`.
 +
 [source,sh,role=execute]
 ----
 oc -n openshift-monitoring get configmap cluster-monitoring-config -o yaml
 ----
 +
-.Sample Output
+.Sample Output (the newlines is becuase of helm template syntax)
 [source,text,options=nowrap]
 ----
 apiVersion: v1
-data: {}
+data:
+  config.yaml: |2
+
+    enableUserWorkload: true
+
+    prometheusK8s:
+      remoteWrite:
+        - url: "http://thanos-receive.custom-logging.svc.cluster.local:9091/api/v1/receive"
 kind: ConfigMap
 metadata:
-  creationTimestamp: "2023-06-06T17:11:22Z"
-  name: cluster-monitoring-config
   namespace: openshift-monitoring
-  resourceVersion: "391968"
-  uid: 5d84fef5-d798-4b11-bb2f-dd93fc6e76d8
+  annotations:
+    meta.helm.sh/release-name: aro-thanos-af
+    meta.helm.sh/release-namespace: custom-logging
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  name: cluster-monitoring-config
 ----
 
-. Enable User Workload Monitoring:
-+
-[source,sh,role=execute]
-----
-oc patch configmap cluster-monitoring-config -n openshift-monitoring \
-  --patch='{"data":{"config.yaml": "enableUserWorkload: true\n"}}'
-----
-
-. Check that the User workload monitoring is starting up (wait until the output below matches what you see):
+. We can also check that the User workload monitoring has started up (wait until the output below matches what you see):
 +
 [source,sh,role=execute]
 ----
@@ -532,7 +580,7 @@ thanos-ruler-user-workload-1           3/3     Running   0          23m
 
 . Append `remoteWrite` settings to the user-workload-monitoring config to forward user workload metrics to Thanos.
 +
-Check if the User Workload Config Map exists:
+You can also review the User Workload Config Map that setups logging via thanos:
 +
 [source,sh,role=execute]
 ----
@@ -544,41 +592,35 @@ oc -n openshift-user-workload-monitoring get \
 [source,text,options=nowrap]
 ----
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: "2023-06-07T09:14:09Z"
-  name: user-workload-monitoring-config
-  namespace: openshift-user-workload-monitoring
-  resourceVersion: "392232"
-  uid: c1a3c96a-1773-4a56-ba4d-537c7cb9a92a
-----
-
-. Update the ConfigMap:
-+
-[source,sh,role=execute]
-----
-cat << EOF | kubectl apply -f -
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: user-workload-monitoring-config
-  namespace: openshift-user-workload-monitoring
 data:
   config.yaml: |
     prometheus:
       remoteWrite:
-      - url: "http://thanos-receive.custom-logging.svc.cluster.local:9091/api/v1/receive"
-EOF
+        - url: "http://thanos-receive.custom-logging.svc.cluster.local:9091/api/v1/receive"
+kind: ConfigMap
+metadata:
+  namespace: openshift-user-workload-monitoring
+  labels:
+    app.kubernetes.io/managed-by: cluster-monitoring-operator
+    app.kubernetes.io/part-of: openshift-monitoring
+  name: user-workload-monitoring-config
 ----
 
 *Congratulations!*
 
 Your cluster is now configured to allow custom metrics.
 
+== View the Metrics and Logs in the OpenShift console
+
+In addition to viewing logs in Grafana, you can also view logs stored in Azure Blob Storage directly inside the OpenShift console with the help of the OpenShift logging UI plugin. The logging UI plugin is provided by the Red Hat OpenShift Cluster Observability Operator that we installed as part of the aro-clf-blob helm chart.
+
+- To view metrics, to go the "Observe" left hand menu and then click on "Metrics".
+- To view logs, to go the "Observe" left hand menu and then click on "Logs" and select appropriate filter
+
 == Summary
 
 Here you learned how to:
 
-* Configure metrics and log forwarding to Azure Files
+* Configure metrics and log forwarding to Azure Blob Storage
 * View the metrics and logs in a Grafana dashboard
+* View your stored logs in the OpenShift Console

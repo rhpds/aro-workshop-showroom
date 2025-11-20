@@ -13,7 +13,7 @@ https://azure.microsoft.com/en-us/services/openshift/[Azure Red Hat OpenShift,wi
 - Make an application on OpenShift scalable and resistant to node failures and upgrades.
 - Ensure application configuration consistency with OpenShift GitOps.
 - Deploy an application to ARO.
-- Integrate ARO with Azure services such as Azure AD, Azure Files, and more. 
+- Integrate ARO with Azure services such as Azure AD, Azure Blob Storage, and more. 
 - Deploy OpenShift Service Mesh on ARO to manage a microservices deployment.
 
 After completing this workshop, attendees will understand the concepts of modern application platforms, and will have begun to lay the foundations in their provided Azure infrastructure.
