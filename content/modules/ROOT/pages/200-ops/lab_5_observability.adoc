@@ -386,7 +386,7 @@ managed-csi
 [source,sh,role=execute]
 ----
 helm upgrade -n custom-logging aro-clf-blob \
- --install mobb/aro-clf-blob --version 0.2.36 \
+ --install mobb/aro-clf-blob --version 0.2.37 \
  --set "azure.storageAccount=${AZR_STORAGE_ACCOUNT_NAME}"  \
  --set "azure.storageAccountKey=${AZR_STORAGE_KEY}"   \
  --set "azure.storageContainer=aro-logs" \
