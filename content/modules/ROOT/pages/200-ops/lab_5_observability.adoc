@@ -444,7 +444,7 @@ https://grafana-route-custom-logging.apps.nbybk9f3.eastus.aroapp.io
 
 . Browse to the provided route address in the same browser window as your OCP console and login using your OpenShift credentials. If you tested this before you are already logged in.
 
-. View an existing dashboard such as *custom-logging \-> Node Exporter \-> USE Method \-> Cluster* (click on the *search* icon on the left to see the *custom-logging* dashboard).
+. To view an existing dashboard, first click on *Dashboards" in the left menu and then: *custom-logging \-> Node Exporter \-> USE Method \-> Cluster* (click on the *search* icon on the left to see the *custom-logging* dashboard).
 +
 [INFO]
 ====
@@ -458,9 +458,49 @@ image::grafana-metrics.png[]
 If you don't see the graphs as in the screenshot above wait a minute and refresh the browser window - it takes a few minutes for the Grafana dashboard to start showing data.
 ====
 
-. Click the Explore (compass) Icon in the left hand menu, select "`Loki (Application)`" in the dropdown and search for `{kubernetes_namespace_name="custom-logging"}`. Click the blue *Run Query* button on the top right to execute the search.
+. Click the Drilldown (drill) icon in the left hand menu, then select "Logs". You will now see an error message like this:
 +
-image::grafana-logs.png[]
+image::loki-access-error.png[]
++
+This you can safely ignore, the reason is because we have only given permission to see logs in the `custom-logging` namespace and Grafana tries to access API endpoints it does not have permissions to use. When setting up the label selector you will also see a few warning about access, that is again because Grafana tries to read all values from the backend but it's limited in access.
+
+. The data source "`Loki (Application)`" is preselected in the dropdown for "Data source", if not, select it.
++
+image::loki-datasource-selector.png[]
++
+In the labels field first enter
++
+[source,text,options=nowrap]
+----
+log_type
+----
++
+Then click on the `Use custom value`, then click `= Equals` and enter
++
+[source,text,options=nowrap]
+----
+application
+----
++
+Then press the enter key (Grafana tries to ). For the second label, enter:
++
+[source,text,options=nowrap]
+----
+kubernetes_namespace_name
+----
++
+Then click on the `Use custom value`, then click `= Equals` and enter
++
+[source,text,options=nowrap]
+----
+custom-logging
+----
++
+Complete the label setup by pressing the enter key.
++
+. Click the "Show logs" button to view logs from loki.
++
+image::logi-grafana-logs.png[]
 
 == Enabling Custom Metrics
 
