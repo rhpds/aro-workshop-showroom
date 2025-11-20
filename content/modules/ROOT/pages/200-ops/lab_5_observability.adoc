@@ -405,12 +405,14 @@ REVISION: 1
 TEST SUITE: None
 ----
 
-. Wait until thanos and the grafana operator has been successfully deployed. Run the following command:
+. Wait until loki has been successfully deployed. Run the following command:
 +
 [source,sh,role=execute]
 ----
-oc -n custom-logging rollout status deploy aro-thanos-af-grafana-cr-deployment
-oc -n custom-logging rollout status deploy thanos-querier
+oc -n openshift-logging rollout status deploy logging-loki-distributor
+oc -n openshift-logging rollout status deploy logging-loki-gateway
+oc -n openshift-logging rollout status deploy logging-loki-querier
+oc -n openshift-logging rollout status deploy logging-loki-query-frontend
 ----
 +
 .Sample Output
