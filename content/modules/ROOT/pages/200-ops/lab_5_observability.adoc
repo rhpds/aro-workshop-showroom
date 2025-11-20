@@ -537,15 +537,13 @@ In order to display metrics from your own applications you need to enable custom
 oc -n openshift-monitoring get configmap cluster-monitoring-config -o yaml
 ----
 +
-.Sample Output (the newlines is becuase of helm template syntax)
+.Sample Output
 [source,text,options=nowrap]
 ----
 apiVersion: v1
 data:
-  config.yaml: |2
-
+  config.yaml: |
     enableUserWorkload: true
-
     prometheusK8s:
       remoteWrite:
         - url: "http://thanos-receive.custom-logging.svc.cluster.local:9091/api/v1/receive"
@@ -578,9 +576,7 @@ thanos-ruler-user-workload-0           3/3     Running   0          23m
 thanos-ruler-user-workload-1           3/3     Running   0          23m
 ----
 
-. Append `remoteWrite` settings to the user-workload-monitoring config to forward user workload metrics to Thanos.
-+
-You can also review the User Workload Config Map that setups logging via thanos:
+. You can also review the User Workload Config Map that setups logging via thanos:
 +
 [source,sh,role=execute]
 ----
