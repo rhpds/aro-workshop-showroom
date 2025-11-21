@@ -36,7 +36,7 @@ To do so, run the following command (this command will take ~ 5mins)
 ----
 az postgres flexible-server create \
 --resource-group openenv-$GUID \
---location eastus \
+--location eastus2 \
 --name microsweeper-$GUID \
 --admin-user myAdmin  --admin-password 'M1cr0Sw33p3r!' \
 --sku-name Standard_D2s_v3 \
