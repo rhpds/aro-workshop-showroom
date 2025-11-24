@@ -174,7 +174,7 @@ quarkus ext add kubernetes-config
 [source,text,options=nowrap]
 ----
 Looking for the newly published extensions in registry.quarkus.io
-[SUCCESS] ✅  Extension io.quarkus:quarkus-openshift has been installed
+[SUCCESS] ✅  Extension io.quarkus:quarkus-kubernetes-config has been installed
 ----
 
 . Create a OpenShift secret containing Database credentials for Quarkus to use:
